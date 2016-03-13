@@ -2,24 +2,31 @@
  * Copyright (C) 2009 Giacomo Spigler
  * CopyPolicy: Released under the terms of the GNU GPL v3.0.
  */
-#include <unistd.h>
-#include <iostream>
-#include "libcam.h"
+#include "common.h"
+#include "camera.h"
+
 #include <cv.h>
 #include <highgui.h>
 
-//#define RASP
+#include <unistd.h>
+
+//#define RASPBERRY
 
 using namespace std;
+using namespace robo;
 
 int main() {
 
   int res = 0;
 
+/* POC Code Below, pulls two images and saved them. Or if not
+on raspberry, then displays them. */
+
 /*
   int ww = 800;
   int hh = 600;
 */
+
   int ww = 640;
   int hh = 480;
 
@@ -31,7 +38,7 @@ int main() {
 
 //cout<<c.setSharpness(3)<<"   "<<c.minSharpness()<<"  "<<c.maxSharpness()<<" "<<c.defaultSharpness()<<endl;
 
-#ifndef RASP
+#ifndef RASPBERRY
   cvNamedWindow("1", CV_WINDOW_AUTOSIZE);
   cvNamedWindow("2", CV_WINDOW_AUTOSIZE);
 #endif
@@ -68,7 +75,7 @@ int main() {
 
 	usleep(10000);
 
-#ifndef RASP
+#ifndef RASPBERRY
     cvShowImage("1", l1);
     cvShowImage("2", l2);
 
@@ -79,7 +86,7 @@ int main() {
 #endif
   }
 
-#ifndef RASP
+#ifndef RASPBERRY
   cvDestroyWindow("1");
   cvDestroyWindow("2");
 #else

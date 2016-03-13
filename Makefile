@@ -1,8 +1,41 @@
+#
+# Robot Vision Module Makefile
+#
+NAME=vision_module.out
 
-all:
-	g++ -std=c++11 -fno-exceptions -fno-rtti -O2 -g -c -o libcam.o libcam.cpp
-	g++ -std=c++11 -g -c -o test.o test.cpp `pkg-config opencv --cflags --libs`
-	g++ -std=c++11 -g -o test test.o libcam.o `pkg-config opencv --cflags --libs`
+#
+# TODO: Do we need to link to all OpenCV libs? Reduce this
+# 
+OPENCV_LDFLAGS := $(shell pkg-config opencv --libs)
+OPENCV_CPPFLAGS := $(shell pkg-config opencv --cflags)
 
-clean:
-	rm -f *.o *.png test
+CPP=g++
+CPPFLAGS=-g -O2 -MMD -std=c++11 -pthread
+LDFLAGS=-lrt -pthread
+
+MODULES :=
+
+SOURCES := $(wildcard *.cpp)
+
+-include $(patsubst %, %/module.mk, $(MODULES))
+
+OBJECTS := $(patsubst %.cpp, %.o, $(filter %.cpp,$(SOURCES)))
+
+.PHONY: all
+all : compile_all
+
+%.o : %.cpp
+	$(CPP) $(CPPFLAGS) $(OPENCV_CPPFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(NAME) : $(OBJECTS)
+	$(CPP) -o $@ $^ $(LDFLAGS) $(OPENCV_LDFLAGS)
+
+.PHONY: compile_all
+compile_all: $(NAME)
+
+.PHONY: clean
+clean :
+	@rm -f $(OBJECTS) $(NAME)
+	@rm -f $(patsubst %.o, %.d, $(filter %.o,$(OBJECTS)))
+
+-include $(OBJECTS:.o=.d)

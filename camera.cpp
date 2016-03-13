@@ -1,6 +1,7 @@
 /*
  Copyright (C) 2009 Giacomo Spigler
  2013 - George Jordanov - improve in performance for HSV conversion and improvements
+ 2016 - Tolga Ceylan - ported to robot code with limited mmap only features.
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -16,27 +17,26 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
+#include "camera.h"
+
 #include <string.h>
 #include <assert.h>
-
-#include <getopt.h>             /* getopt_long() */
 
 #include <fcntl.h>              /* low-level i/o */
 #include <unistd.h>
 #include <errno.h>
 #include <malloc.h>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-
 #include <asm/types.h>          /* for videodev2.h */
 
 #include <linux/videodev2.h>
-#include "test.h"
-#include "libcam.h"
+
+namespace robo {
 
 static int g_lookup_done;
 static unsigned char g_yv[256][256];
@@ -98,18 +98,13 @@ static int query_device(const char *name, const char *tag, int fd, struct v4l2_q
     return 0;
 }
 
-static inline int check_min_max(const Camera::Setting &set, int v)
-{
-    return set.init && v >= set.min && v <= set.max;
-}
-
 static int control_device(const char *name, const char *tag, int fd, struct v4l2_control *control)
 {
-  int res = 0;
-  res = HANDLE_EINTR(::ioctl(fd, VIDIOC_S_CTRL, control));
-  if (res)
-    logger(LOG_ERROR, "%s VIDIOC_S_CTRL (%s) res=%d errno=%d", name, tag, res, errno);
-  return res;
+    int res = 0;
+    res = HANDLE_EINTR(::ioctl(fd, VIDIOC_S_CTRL, control));
+    if (res)
+        logger(LOG_ERROR, "%s VIDIOC_S_CTRL (%s) res=%d errno=%d", name, tag, res, errno);
+    return res;
 }
 
 Camera::Camera()
@@ -118,8 +113,8 @@ Camera::Camera()
   m_height(0),
   m_data(NULL),
   m_fd(-1),
-  m_buffers(NULL),
-  m_name(NULL)
+  m_name(NULL),
+  m_buffers(NULL)
 {
     memset(m_settings, 0, sizeof(m_settings));
 
@@ -170,7 +165,7 @@ int Camera::initialize(const char *name, int w, int h, int f)
     res = res || init_mmap();
     res = res || start_capture();
     if (res)
-      goto fail;
+        goto fail;
 
     return 0;
 
@@ -216,7 +211,7 @@ void Camera::shutdown()
     }
 
     if (m_data)
-      free(m_data);
+        free(m_data);
     m_data = NULL;
     m_name = NULL;
 }
@@ -299,7 +294,6 @@ int Camera::initialize_device(int fps)
         return EFAULT;
     }
 
-    // result status is ignored
     initialize_setting(SETTING_BRIGHTNESS);
     initialize_setting(SETTING_CONTRAST);
     initialize_setting(SETTING_SATURATION);
@@ -311,15 +305,14 @@ int Camera::initialize_device(int fps)
     //here should go custom calls to xioctl
     //END TO ADD SETTINGS
 
-    /* Note VIDIOC_S_FMT may change width and height. */
-
     /* Buggy driver paranoia. */
     min = fmt.fmt.pix.width * 2;
     if(fmt.fmt.pix.bytesperline < min)
-      fmt.fmt.pix.bytesperline = min;
+        fmt.fmt.pix.bytesperline = min;
+    
     min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
     if(fmt.fmt.pix.sizeimage < min)
-      fmt.fmt.pix.sizeimage = min;
+        fmt.fmt.pix.sizeimage = min;
 
     return 0;
 }
@@ -441,7 +434,7 @@ int Camera::start_capture()
 int Camera::capture()
 {
     if (!m_buffers)
-      return EINVAL;
+        return EINVAL;
 
     assert(m_data);
     assert(m_fd != -1);
@@ -483,7 +476,7 @@ int Camera::toIplImage(unsigned char *buf, int width) const
     assert(width > 0);
 
     if (!m_buffers)
-      return EINVAL;
+        return EINVAL;
 
     const int w2 = m_width_h;
     const int h  = m_height;
@@ -527,7 +520,7 @@ int Camera::toGrayScaleIplImage(unsigned char *buf, int width) const
     assert(width > 0);
 
     if (!m_buffers)
-      return EINVAL;
+        return EINVAL;
 
     const int w2 = m_width_h;
     const int h  = m_height;
@@ -557,7 +550,7 @@ int Camera::toMat(unsigned char *buf, int channels, int cols) const
     assert(cols > 0);
 
     if (!m_buffers)
-      return EINVAL;
+        return EINVAL;
 
     const int w2 = m_width_h;
     const int h  = m_height;
@@ -603,7 +596,7 @@ int Camera::toGrayScaleMat(unsigned char *buf, int channels, int cols) const
     assert(cols > 0);
 
     if (!m_buffers)
-      return EINVAL;
+        return EINVAL;
 
     const int w2 = m_width_h;
     const int h  = m_height;
@@ -630,10 +623,9 @@ int Camera::toGrayScaleMat(unsigned char *buf, int channels, int cols) const
     return 0;
 }
 
-int Camera::initialize_setting(SettingType set_type)
+void Camera::initialize_setting(SettingType set_type)
 {
-    if (set_type < 0 || set_type >= SETTING_MAX)
-      return EINVAL;
+    assert(set_type >= 0 && set_type < SETTING_MAX);
 
     int res = 0;
     struct v4l2_queryctrl queryctrl;
@@ -641,24 +633,27 @@ int Camera::initialize_setting(SettingType set_type)
     queryctrl.id = m_settings[set_type].vl_id;
 
     res = query_device(m_name, m_settings[set_type].tag, m_fd, &queryctrl);
+
+    m_settings[set_type].err = res;
+
     if (!res) {
-      m_settings[set_type].min  = queryctrl.minimum;
-      m_settings[set_type].max  = queryctrl.maximum;
-      m_settings[set_type].def  = queryctrl.default_value;
-      m_settings[set_type].init = 1;
+        m_settings[set_type].min  = queryctrl.minimum;
+        m_settings[set_type].max  = queryctrl.maximum;
+        m_settings[set_type].def  = queryctrl.default_value;
     }
-    return res;
 }
 
 int Camera::setSetting(SettingType set_type, int v)
 {
     if (!m_buffers || set_type < 0 || set_type >= SETTING_MAX)
-      return EINVAL;
+        return EINVAL;
 
     Setting &set = m_settings[set_type];
 
-    if (!set.init || v < set.min || v > set.max)
-      return EINVAL;
+    if (set.err)
+        return set.err;
+    if (v < set.min || v > set.max)
+        return EINVAL;
 
     struct v4l2_control control;
 
@@ -673,9 +668,12 @@ int Camera::setSetting(SettingType set_type, int v)
 Camera::Setting Camera::getSetting(SettingType set_type) const
 {
     if (m_buffers && set_type >= 0 && set_type < SETTING_MAX)
-      return m_settings[set_type];
+        return m_settings[set_type];
 
     Setting tmp;
     memset(&tmp, 0, sizeof(tmp));
+    tmp.err = EINVAL;
     return tmp;
 }
+
+} // namespace robo
