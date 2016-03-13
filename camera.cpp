@@ -175,7 +175,7 @@ fail:
 }
 
 Camera::~Camera() {
-  shutdown();
+    shutdown();
 }
 
 void Camera::shutdown()

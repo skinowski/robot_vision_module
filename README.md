@@ -48,9 +48,9 @@ a wifi USB eth card) to avoid saturating the USB bus.
 
 ## Links / References
 
-[Google code Minoru Webcam](https://code.google.com/archive/p/sentience/wikis/MinoruWebcam.wiki)
-[Google code libv4l2cam](https://code.google.com/archive/p/libv4l2cam/)
-[Related OpenCV API](http://docs.opencv.org/2.4.12/modules/calib3d/doc/calib3d.html)
-[Minoru 3D webcam for real-time stereo imaging](http://robocv.blogspot.com/2012/01/minoru-3d-webcam-for-real-time-stereo.html)
-[Computing a disparity map in OpenCV](http://glowingpython.blogspot.de/2011/11/computing-disparity-map-in-opencv.html)
-[Fundamental Guide for Stereo Vision Cameras in Robotics – Tutorials and Resources](http://www.intorobotics.com/fundamental-guide-for-stereo-vision-cameras-in-robotics-tutorials-and-resources/)
+* [Google code Minoru Webcam](https://code.google.com/archive/p/sentience/wikis/MinoruWebcam.wiki)
+* [Google code libv4l2cam](https://code.google.com/archive/p/libv4l2cam/)
+* [Related OpenCV API](http://docs.opencv.org/2.4.12/modules/calib3d/doc/calib3d.html)
+* [Minoru 3D webcam for real-time stereo imaging](http://robocv.blogspot.com/2012/01/minoru-3d-webcam-for-real-time-stereo.html)
+* [Computing a disparity map in OpenCV](http://glowingpython.blogspot.de/2011/11/computing-disparity-map-in-opencv.html)
+* [Fundamental Guide for Stereo Vision Cameras in Robotics – Tutorials and Resources](http://www.intorobotics.com/fundamental-guide-for-stereo-vision-cameras-in-robotics-tutorials-and-resources/)
