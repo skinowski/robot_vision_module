@@ -1,4 +1,8 @@
-
+/*
+ * Copyright (C) 2016 Tolga Ceylan
+ *
+ * CopyPolicy: Released under the terms of the GNU GPL v3.0.
+ */
 #ifndef __COMMON__H__
 #define __COMMON__H__
 
