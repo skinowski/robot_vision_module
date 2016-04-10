@@ -13,18 +13,18 @@ namespace robo {
 // Simple test client
 class Client
 {
-	public:
-		Client();
-		~Client();
+    public:
+        Client();
+        ~Client();
 
-		int initialize(const char *uds_path);
-		void shutdown();
+        int initialize(const char *uds_path);
+        void shutdown();
 
-		int send_request(const proto::Request &request);
-		int get_response(proto::Response &response);
+        int send_request(const proto::Request &request);
+        int get_response(proto::Response &response);
 
-	private:
-		int 			m_server_fd;
+    private:
+        int             m_server_fd;
 };
 
 } // namespace robo

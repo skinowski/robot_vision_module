@@ -24,17 +24,17 @@ Original libv4l2cam code is based on Giacomo Spigler and George Jordanov.
 * Implement the following settings in robo::Camera to avoid different focus
 values in two cameras:
 ```
-	#
-	# disable auto-focus
-	#
-	v4l2-ctl -d 0 -c focus_auto=0
-	v4l2-ctl -d 1 -c focus_auto=0
+    #
+    # disable auto-focus
+    #
+    v4l2-ctl -d 0 -c focus_auto=0
+    v4l2-ctl -d 1 -c focus_auto=0
 
-	#
-	# actual focus value to be determined empirically?
-	#
-	v4l2-ctl -d 0 -c focus_absolute=0
-	v4l2-ctl -d 1 -c focus_absolute=0
+    #
+    # actual focus value to be determined empirically?
+    #
+    v4l2-ctl -d 0 -c focus_absolute=0
+    v4l2-ctl -d 1 -c focus_absolute=0
 ```
 
 * Implement camera calibration support

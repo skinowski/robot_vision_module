@@ -20,26 +20,26 @@ namespace robo {
 //
 class Server
 {
-	public:
-		Server();
-		~Server();
+    public:
+        Server();
+        ~Server();
 
-		int initialize(const char *uds_path);
-		void shutdown();
+        int initialize(const char *uds_path);
+        void shutdown();
 
-		int get_request(proto::Request &request);
-		int send_response(const proto::Response &response);
+        int get_request(proto::Request &request);
+        int send_response(const proto::Response &response);
 
-	private:
+    private:
 
-		int accept_client();
-		void close_client();
+        int accept_client();
+        void close_client();
 
-	private:
+    private:
 
-		const char 		*m_uds_path;
-		int 			m_server_fd;
-		int 			m_client_fd;
+        const char      *m_uds_path;
+        int             m_server_fd;
+        int             m_client_fd;
 };
 
 } // namespace robo

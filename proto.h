@@ -14,24 +14,24 @@ namespace robo {
 namespace proto {
 
 enum {
-	CMD_GET_MAP = 0x01,
-	CMD_PING    = 0x02,
-	CMD_EXIT    = 0x03,
+    CMD_GET_MAP = 0x01,
+    CMD_PING    = 0x02,
+    CMD_EXIT    = 0x03,
 } COMMANDS;
 
 struct Request
 {
-	uint32_t trx_id;
-	uint32_t cmd;
+    uint32_t trx_id;
+    uint32_t cmd;
 } __attribute__((packed));;
 
 struct Response
 {
-	uint32_t trx_id;
-	uint32_t cmd;
+    uint32_t trx_id;
+    uint32_t cmd;
 
-	// TODO: we do not yet know our response data type/content
-	uint64_t data;
+    // TODO: we do not yet know our response data type/content
+    uint64_t data;
 } __attribute__((packed));;
 
 } // namespace proto

@@ -19,11 +19,11 @@ namespace robo {
 
 enum LogLevel
 {
-	LOG_TRACE,
-	LOG_DEBUG,
-	LOG_INFO,
-	LOG_WARN,
-	LOG_ERROR,
+    LOG_TRACE,
+    LOG_DEBUG,
+    LOG_INFO,
+    LOG_WARN,
+    LOG_ERROR,
 };
 
 void logger(LogLevel logLevel, const char *format, ...);
