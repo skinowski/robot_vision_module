@@ -4,103 +4,156 @@
  */
 #include "common.h"
 #include "camera.h"
+#include "server.h"
 
 #include <cv.h>
 #include <highgui.h>
 
 #include <unistd.h>
 
-//#define RASPBERRY
+#ifdef __arm__
+#define RASPBERRY
+#endif
 
-using namespace std;
 using namespace robo;
+
+// these should goto config.json/yaml
+const char *UDS_PATH = "/tmp/robo.vision.s";
+
+const char *VIDEO_0 = "/dev/video0";
+const char *VIDEO_1 = "/dev/video1";
+
+const char *VIDEO_0_IMG = "img1.png";
+const char *VIDEO_1_IMG = "img2.png";
+
+/*
+int ww = 800;
+int hh = 600;
+*/
+int ww = 640;
+int hh = 480;
+
+int max_attempts = 100;
+int attemp_sleep_usec = 1000;
 
 int main() {
 
-  int res = 0;
+    int res = 0;
+    uint64_t iterations = 0;
 
-/* POC Code Below, pulls two images and saved them. Or if not
-on raspberry, then displays them. */
+    Camera c1;
+    Camera c2;
+    Server srv;
 
-/*
-  int ww = 800;
-  int hh = 600;
-*/
+    res = srv.initialize(UDS_PATH);
+    if (res)
+        return res;
 
-  int ww = 640;
-  int hh = 480;
+    /* POC Code Below, pulls two images and saved them. Or if not
+    on raspberry, then displays them. */
 
-  Camera c1;
-  Camera c2;
+    c1.initialize(VIDEO_0, ww, hh, 15);
+    c2.initialize(VIDEO_1, ww, hh, 15);
 
-  c1.initialize("/dev/video0", ww, hh, 15);
-  c2.initialize("/dev/video1", ww, hh, 15);
+    #ifndef RASPBERRY
+    cvNamedWindow(VIDEO_0, CV_WINDOW_AUTOSIZE);
+    cvNamedWindow(VIDEO_1, CV_WINDOW_AUTOSIZE);
+    #endif
 
-//cout<<c.setSharpness(3)<<"   "<<c.minSharpness()<<"  "<<c.maxSharpness()<<" "<<c.defaultSharpness()<<endl;
+    IplImage *l1 = cvCreateImage(cvSize(ww, hh), 8, 3);
+    IplImage *l2 = cvCreateImage(cvSize(ww, hh), 8, 3);
 
-#ifndef RASPBERRY
-  cvNamedWindow("1", CV_WINDOW_AUTOSIZE);
-  cvNamedWindow("2", CV_WINDOW_AUTOSIZE);
-#endif
+    while (1) {
 
-  IplImage *l1 = cvCreateImage(cvSize(ww, hh), 8, 3);
-  IplImage *l2 = cvCreateImage(cvSize(ww, hh), 8, 3);
+        ++iterations;
 
-  int i1 = 0;
-  int i2 = 0;
+        proto::Request  request;
+        proto::Response response;
 
-  while(1){
+        // srv operations can block forever
+        res = srv.get_request(request);
+        if (res)
+            break;
 
-	fprintf(stderr, "loop\n");
+        response.trx_id = request.trx_id;
+        response.cmd    = request.cmd;
+        response.data   = 0;
 
-	if (!i1) {
-		fprintf(stderr, "trying 1\n");
-	    if (!c1.update(0)) {
-			fprintf(stderr, "got 1\n");
-			i1 = 1;
-		    c1.toIplImage((unsigned char *)l1->imageData, l1->width);
-		}
-	}
+        if (request.cmd == proto::CMD_PING) {
+            // ignore failure, show must go on  
+            srv.send_response(response);
+            continue;
+        }
 
-	usleep(10000);
+        if (request.cmd == proto::CMD_EXIT) {
+            logger(LOG_INFO, "Exit cmd received");
+            break;
+        }
+      
+        if (request.cmd != proto::CMD_GET_MAP) {
+            logger(LOG_ERROR, "Invalid cmd=%u trx_id=%u", request.cmd, request.trx_id);
+            continue;
+        }
 
-	if (!i2) {
-		fprintf(stderr, "trying 2\n");
-		if (!c2.update(0)) {
-			fprintf(stderr, "got 2\n");
-			i2 = 1;
-		    c2.toIplImage((unsigned char *)l2->imageData, l2->width);
-		}
-	}
+        logger(LOG_TRACE, "Loop");
 
-	usleep(10000);
+        // Below is super flawed. Time difference between two captures is important, but
+        // for now (in our case where things are not "moving", we are OK). Remember
+        // this is an indoor toy robot and we do not expect zipping objects or basketball
+        // players, runners, cats, dogs, bees, etc.
 
-#ifndef RASPBERRY
-    cvShowImage("1", l1);
-    cvShowImage("2", l2);
+        int attempts = max_attempts;
 
-    if( (cvWaitKey(10) & 255) == 27 ) break;
-#else
-	if (i1 && i2)
-		break;
-#endif
-  }
+        while (--attempts > 0) {
+            if (!c1.update(0))
+                break;
+            usleep(attemp_sleep_usec);
+        }
+        while (--attempts > 0) {
+            if (!c2.update(0))
+                break;
+            usleep(attemp_sleep_usec);
+        }
 
-#ifndef RASPBERRY
-  cvDestroyWindow("1");
-  cvDestroyWindow("2");
-#else
-  cvSaveImage("1.png", l1);
-  cvSaveImage("2.png", l2);
-#endif
+        if (attempts <= 0) {
+            logger(LOG_ERROR, "Failed capturing images in %d attempts", max_attempts);
+            break;
+        }
 
-  cvReleaseImage(&l1);
-  cvReleaseImage(&l2);
+        c1.toIplImage((unsigned char *)l1->imageData, l1->width);
+        c2.toIplImage((unsigned char *)l2->imageData, l2->width);
 
-  c1.shutdown();
-  c2.shutdown();
+        #ifndef RASPBERRY
+        cvShowImage(VIDEO_0, l1);
+        cvShowImage(VIDEO_1, l2);
+        if((cvWaitKey(10) & 255) == 27)
+            break;
+        #endif
 
-  return 0;
+        response.data = iterations; /* dummy, TODO pass actual data here when impl is ready */
+        // ignore res, show must go on...
+        srv.send_response(response);
+    }
+
+    logger(LOG_INFO, "Exiting");
+
+    #ifndef RASPBERRY
+    cvDestroyWindow(VIDEO_0);
+    cvDestroyWindow(VIDEO_1);
+    #else
+    /* DEMO CODE, remove this when impl is ready to send data via srv */
+    cvSaveImage(VIDEO_0_IMG, l1);
+    cvSaveImage(VIDEO_1_IMG, l2);
+    #endif
+
+    cvReleaseImage(&l1);
+    cvReleaseImage(&l2);
+
+    c1.shutdown();
+    c2.shutdown();
+    srv.shutdown();
+
+    return 0;
 }
 
 
